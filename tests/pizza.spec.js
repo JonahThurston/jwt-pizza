@@ -175,3 +175,56 @@ test("registerAndLogout", async ({ page }) => {
   await page.getByRole("link", { name: "Logout" }).click();
   await expect(page.locator("#navbar-dark")).toContainText("Login");
 });
+
+test("admin dashboard", async ({ page }) => {
+  await page.route("*/**/api/auth", async (route) => {
+    const loginReq = { email: "deen@jwt.com", password: "pass" };
+    const loginRes = {
+      user: {
+        id: 3,
+        name: "deen",
+        email: "deen@jwt.com",
+        roles: [{ role: "admin" }],
+      },
+      token: "abcdef",
+    };
+    expect(route.request().method()).toBe("PUT");
+    expect(route.request().postDataJSON()).toMatchObject(loginReq);
+    await route.fulfill({ json: loginRes });
+  });
+
+  await page.route("*/**/api/franchise", async (route) => {
+    const franchiseRes = [
+      {
+        id: 2,
+        name: "LotaPizza",
+        stores: [
+          { id: 4, name: "Lehi" },
+          { id: 5, name: "Springville" },
+          { id: 6, name: "American Fork" },
+        ],
+      },
+      { id: 3, name: "PizzaCorp", stores: [{ id: 7, name: "Spanish Fork" }] },
+      { id: 4, name: "topSpot", stores: [] },
+    ];
+    expect(route.request().method()).toBe("GET");
+    await route.fulfill({ json: franchiseRes });
+  });
+
+  await page.goto("http://localhost:5173/");
+
+  //login
+  await page.getByRole("link", { name: "Login" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).click();
+  await page
+    .getByRole("textbox", { name: "Email address" })
+    .fill("deen@jwt.com");
+  await page.getByRole("textbox", { name: "Email address" }).press("Tab");
+  await page.getByRole("textbox", { name: "Password" }).fill("pass");
+  await page.getByRole("button", { name: "Login" }).click();
+
+  //navigate to admin dashboard
+  await page.getByRole("link", { name: "Admin" }).click();
+  await expect(page.getByRole("heading")).toContainText("Mama Ricci's kitchen");
+  await expect(page.locator("thead")).toContainText("Franchise");
+});
