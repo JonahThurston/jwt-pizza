@@ -120,3 +120,58 @@ test("purchase with login", async ({ page }) => {
   // Check balance
   await expect(page.getByText("0.008")).toBeVisible();
 });
+
+test("registerAndLogout", async ({ page }) => {
+  await page.route("*/**/api/auth", async (route) => {
+    const method = route.request().method();
+    if (method === "POST") {
+      const registerReq = {
+        name: "bigGuy",
+        email: "bg@jwt.com",
+        password: "pass",
+      };
+      const registerRes = {
+        user: {
+          id: 83,
+          name: "bigGuy",
+          email: "bg@jwt.com",
+          roles: [{ role: "diner" }],
+        },
+        token: "abcdef",
+      };
+      expect(route.request().postDataJSON()).toMatchObject(registerReq);
+      await route.fulfill({ json: registerRes });
+    } else if (method === "DELETE") {
+      const logoutRes = {
+        message: "logout successful",
+      };
+      await route.fulfill({ json: logoutRes });
+    } else {
+      throw new Error(
+        `Unexpected request method: ${method} for ${route.request().url()}`
+      );
+    }
+  });
+
+  await page.goto("http://localhost:5173/");
+
+  //navigate to register page
+  await page.getByRole("link", { name: "Register" }).click();
+  await expect(page.getByRole("heading")).toContainText("Welcome to the party");
+
+  //fill in info
+  await page.getByRole("textbox", { name: "Full name" }).click();
+  await page.getByRole("textbox", { name: "Full name" }).fill("bigGuy");
+  await page.getByRole("textbox", { name: "Full name" }).press("Tab");
+  await page.getByRole("textbox", { name: "Email address" }).fill("bg@jwt.com");
+  await page.getByRole("textbox", { name: "Email address" }).press("Tab");
+  await page.getByRole("textbox", { name: "Password" }).fill("pass");
+
+  //click register
+  await page.getByRole("button", { name: "Register" }).click();
+  await expect(page.locator("#navbar-dark")).toContainText("Logout");
+
+  //click logout
+  await page.getByRole("link", { name: "Logout" }).click();
+  await expect(page.locator("#navbar-dark")).toContainText("Login");
+});
