@@ -228,3 +228,21 @@ test("admin dashboard", async ({ page }) => {
   await expect(page.getByRole("heading")).toContainText("Mama Ricci's kitchen");
   await expect(page.locator("thead")).toContainText("Franchise");
 });
+
+test("docs, history, about, franchise", async ({ page }) => {
+  await page.goto("http://localhost:5173/docs");
+  await expect(page.getByRole("heading")).toContainText("JWT Pizza API");
+  await page.getByRole("link", { name: "home" }).click();
+  await page.getByRole("link", { name: "About" }).click();
+  await expect(page.getByRole("main")).toContainText("The secret sauce");
+  await page.getByRole("link", { name: "home" }).click();
+  await page.getByRole("link", { name: "History" }).click();
+  await expect(page.getByRole("heading")).toContainText("Mama Rucci, my my");
+  await page
+    .getByRole("contentinfo")
+    .getByRole("link", { name: "Franchise" })
+    .click();
+  await expect(page.getByRole("main")).toContainText(
+    "So you want a piece of the pie?"
+  );
+});
