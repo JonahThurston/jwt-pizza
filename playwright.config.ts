@@ -19,7 +19,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
   //Added this based on cv paste i found in github playwright instructions
-  timeout: 5000,
+  timeout: 20000,
   use: {
     //added this based on github stuff
     baseURL: "http://localhost:5173",

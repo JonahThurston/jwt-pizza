@@ -194,21 +194,47 @@ test("admin dashboard", async ({ page }) => {
   });
 
   await page.route("*/**/api/franchise", async (route) => {
-    const franchiseRes = [
-      {
-        id: 2,
-        name: "LotaPizza",
-        stores: [
-          { id: 4, name: "Lehi" },
-          { id: 5, name: "Springville" },
-          { id: 6, name: "American Fork" },
-        ],
-      },
-      { id: 3, name: "PizzaCorp", stores: [{ id: 7, name: "Spanish Fork" }] },
-      { id: 4, name: "topSpot", stores: [] },
-    ];
-    expect(route.request().method()).toBe("GET");
-    await route.fulfill({ json: franchiseRes });
+    const method = route.request().method();
+    if (method === "GET") {
+      const franchiseRes = [
+        {
+          id: 2,
+          name: "LotaPizza",
+          stores: [
+            { id: 4, name: "Lehi" },
+            { id: 5, name: "Springville" },
+            { id: 6, name: "American Fork" },
+          ],
+        },
+        { id: 3, name: "PizzaCorp", stores: [{ id: 7, name: "Spanish Fork" }] },
+        { id: 4, name: "topSpot", stores: [] },
+      ];
+      await route.fulfill({ json: franchiseRes });
+    } else if (method === "POST") {
+      const creFranchReq = {
+        name: "testFranchise",
+        admins: [{ email: "f@jwt.com" }],
+      };
+      const creFrnchRes = {
+        name: "testFranchise",
+        admins: [{ email: "f@jwt.com", id: 4, name: "pizza franchisee" }],
+        id: 1,
+      };
+      expect(route.request().postDataJSON()).toMatchObject(creFranchReq);
+      await route.fulfill({ json: creFrnchRes });
+    } else {
+      throw new Error(
+        `Unexpected request method: ${method} for ${route.request().url()}`
+      );
+    }
+  });
+
+  await page.route("*/**/api/franchise/*", async (route) => {
+    const delFrnchRes = {
+      message: "franchise deleted",
+    };
+    expect(route.request().method()).toBe("DELETE");
+    await route.fulfill({ json: delFrnchRes });
   });
 
   await page.goto("http://localhost:5173/");
@@ -227,6 +253,29 @@ test("admin dashboard", async ({ page }) => {
   await page.getByRole("link", { name: "Admin" }).click();
   await expect(page.getByRole("heading")).toContainText("Mama Ricci's kitchen");
   await expect(page.locator("thead")).toContainText("Franchise");
+
+  //open a franchise
+  await page.getByRole("button", { name: "Add Franchise" }).click();
+  await expect(page.getByRole("heading")).toContainText("Create franchise");
+  await page.getByRole("textbox", { name: "franchise name" }).click();
+  await page
+    .getByRole("textbox", { name: "franchise name" })
+    .fill("testFranchise");
+  await page.getByRole("textbox", { name: "franchise name" }).press("Tab");
+  await page
+    .getByRole("textbox", { name: "franchisee admin email" })
+    .fill("f@jwt.com");
+  await page.getByRole("button", { name: "Create" }).click();
+  await expect(page.getByRole("heading")).toContainText("Mama Ricci's kitchen");
+
+  //close a franchise
+  await page
+    .getByRole("row", { name: "LotaPizza Close" })
+    .getByRole("button")
+    .click();
+  await expect(page.getByRole("heading")).toContainText("Sorry to see you go");
+  await page.getByRole("button", { name: "Close" }).click();
+  await expect(page.getByRole("heading")).toContainText("Mama Ricci's kitchen");
 });
 
 test("docs, history, about, franchise", async ({ page }) => {
